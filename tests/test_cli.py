@@ -48,3 +48,19 @@ class TestCLI:
                 main()
         finally:
             sys.argv = old_argv
+
+
+class TestAppendixIntegration:
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_scrapes_article_with_appendices(self):
+        from sep_scraper.cli import scrape_article
+
+        # This article has appendices
+        url = "https://plato.stanford.edu/entries/dynamic-epistemic/"
+
+        result = await scrape_article(url)
+
+        # Should contain appendix content
+        assert "## Appendix A" in result
+        assert "Kripke" in result  # Appendix A is about Kripke models

@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 from sep_scraper.fetcher import (
     fetch_article,
     fetch_mathjax_macros,
+    fetch_appendices,
     validate_sep_url,
     ScraperError,
 )
@@ -58,18 +59,30 @@ async def scrape_article(url: str) -> str:
         fetch_mathjax_macros(url),
     )
 
-    # Parse with custom macros
+    # Parse main article
     soup = BeautifulSoup(html, "lxml")
     parser = SEPParser(soup, url, macros)
 
-    # Extract components
+    # Extract appendix links and fetch appendices
+    appendix_links = parser.get_appendix_links()
+    appendix_pages = await fetch_appendices(appendix_links)
+
+    # Parse each appendix
+    appendices = []
+    for title, appendix_html in appendix_pages:
+        appendix_soup = BeautifulSoup(appendix_html, "lxml")
+        appendix_content = parser.parse_appendix(appendix_soup)
+        if appendix_content:
+            appendices.append((title, appendix_content))
+
+    # Extract other components
     metadata = parser.get_metadata()
     content = parser.get_main_content()
     footnotes = parser.get_footnotes()
     bibliography = parser.get_bibliography()
 
-    # Assemble
-    return assemble_markdown(metadata, content, footnotes, bibliography)
+    # Assemble with appendices
+    return assemble_markdown(metadata, content, footnotes, bibliography, appendices)
 
 
 def main() -> None:
