@@ -110,3 +110,53 @@ class TestAppendixExtraction:
         links = parser.get_appendix_links()
 
         assert links == []
+
+    def test_parses_appendix_content(self):
+        # Main article HTML (needed for parser initialization)
+        main_html = """
+        <html><body><div id="main-text"><p>Main content</p></div></body></html>
+        """
+        main_soup = BeautifulSoup(main_html, "lxml")
+        parser = SEPParser(main_soup, "https://plato.stanford.edu/entries/test/")
+
+        # Appendix HTML
+        appendix_html = """
+        <html><body>
+        <div id="main-text">
+            <p>Appendix introduction paragraph.</p>
+            <h2>Section Title</h2>
+            <p>Section content.</p>
+        </div>
+        </body></html>
+        """
+        appendix_soup = BeautifulSoup(appendix_html, "lxml")
+
+        content = parser.parse_appendix(appendix_soup)
+
+        assert "Appendix introduction paragraph." in content
+        assert "### Section Title" in content  # H2 demoted to H3
+        assert "Section content." in content
+
+    def test_demotes_heading_levels(self):
+        main_html = "<html><body><div id='main-text'></div></body></html>"
+        main_soup = BeautifulSoup(main_html, "lxml")
+        parser = SEPParser(main_soup, "https://plato.stanford.edu/entries/test/")
+
+        appendix_html = """
+        <html><body>
+        <div id="main-text">
+            <h2>Level 2</h2>
+            <h3>Level 3</h3>
+            <h4>Level 4</h4>
+            <h5>Level 5</h5>
+        </div>
+        </body></html>
+        """
+        appendix_soup = BeautifulSoup(appendix_html, "lxml")
+
+        content = parser.parse_appendix(appendix_soup)
+
+        assert "### Level 2" in content  # H2 -> H3
+        assert "#### Level 3" in content  # H3 -> H4
+        assert "##### Level 4" in content  # H4 -> H5
+        assert "###### Level 5" in content  # H5 -> H6

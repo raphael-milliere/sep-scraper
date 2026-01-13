@@ -255,3 +255,39 @@ class SEPParser:
                 break
 
         return appendix_links
+
+    def parse_appendix(self, appendix_soup: BeautifulSoup) -> str:
+        """Parse appendix HTML and convert to markdown with demoted headings.
+
+        Args:
+            appendix_soup: BeautifulSoup parsed appendix document
+
+        Returns:
+            Markdown string with heading levels demoted by 1
+        """
+        main_text = appendix_soup.find("div", id="main-text")
+        if not main_text:
+            main_text = appendix_soup.find("div", id="aueditable")
+
+        if not main_text:
+            return ""
+
+        # Demote heading levels (h2->h3, h3->h4, etc.)
+        for heading in main_text.find_all(["h2", "h3", "h4", "h5"]):
+            current_level = int(heading.name[1])
+            new_level = min(current_level + 1, 6)
+            heading.name = f"h{new_level}"
+
+        # Convert elements (reuse existing logic)
+        lines = []
+        for element in main_text.children:
+            if not hasattr(element, "name"):
+                continue
+            converted = self._convert_element(element)
+            if converted:
+                lines.append(converted)
+                lines.append("")
+
+        result = "\n".join(lines)
+        result = self._math_converter.convert_text(result)
+        return result.strip()
