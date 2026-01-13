@@ -27,25 +27,64 @@ class BibliographyConverter:
         """
         lines = []
 
-        # Find and convert heading
-        heading = section.find(["h2", "h3", "h4"])
-        if heading:
-            heading_text = heading.get_text(strip=True)
-            lines.append(f"## {heading_text}")
-            lines.append("")
+        for element in section.children:
+            if not hasattr(element, "name"):
+                continue
 
-        # Try list-based bibliography first
-        if ul := section.find("ul"):
-            for li in ul.find_all("li", recursive=False):
-                entry = self._text_converter.convert_inline(li)
-                lines.append(f"- {entry}")
+            if element.name == "h2":
+                heading_text = element.get_text(strip=True)
+                lines.append(f"## {heading_text}")
                 lines.append("")
-        # Fall back to paragraph-based
-        else:
-            for p in section.find_all("p"):
-                entry = self._text_converter.convert_inline(p)
+            elif element.name == "h3":
+                heading_text = element.get_text(strip=True)
+                lines.append(f"### {heading_text}")
+                lines.append("")
+            elif element.name == "h4":
+                heading_text = element.get_text(strip=True)
+                lines.append(f"#### {heading_text}")
+                lines.append("")
+            elif element.name == "ul":
+                list_md = self._convert_list(element, depth=0)
+                lines.append(list_md)
+                lines.append("")
+            elif element.name == "p":
+                entry = self._text_converter.convert_inline(element)
                 if entry:
                     lines.append(entry)
                     lines.append("")
 
         return "\n".join(lines).rstrip()
+
+    def _convert_list(self, ul: Tag, depth: int) -> str:
+        """Convert a ul element to markdown list with proper nesting.
+
+        Args:
+            ul: The ul element to convert
+            depth: Current nesting depth for indentation
+
+        Returns:
+            Markdown list string
+        """
+        lines = []
+        indent = "  " * depth
+
+        for li in ul.find_all("li", recursive=False):
+            # Extract nested ul if present (temporarily remove for inline conversion)
+            nested_ul = li.find("ul", recursive=False)
+            if nested_ul:
+                nested_ul.extract()
+
+            # Convert the li content using TextConverter (handles em, strong, a, etc.)
+            text = self._text_converter.convert_inline(li)
+            # Normalize whitespace
+            text = " ".join(text.split())
+
+            if text:
+                lines.append(f"{indent}- {text}")
+
+            # Recurse for nested list
+            if nested_ul:
+                nested_md = self._convert_list(nested_ul, depth + 1)
+                lines.append(nested_md)
+
+        return "\n".join(lines)
