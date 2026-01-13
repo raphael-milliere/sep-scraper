@@ -32,17 +32,23 @@ EXCLUDED_SECTIONS = {
 class SEPParser:
     """Parse SEP article HTML and extract content."""
 
-    def __init__(self, soup: BeautifulSoup, url: str):
+    def __init__(
+        self,
+        soup: BeautifulSoup,
+        url: str,
+        macros: dict[str, str] | None = None,
+    ):
         """Initialize parser with parsed HTML.
 
         Args:
             soup: BeautifulSoup parsed document
             url: Source URL
+            macros: Optional custom MathJax macros for expansion
         """
         self._soup = soup
         self._url = url
         self._text_converter = TextConverter()
-        self._math_converter = MathConverter()
+        self._math_converter = MathConverter(macros)
         self._footnote_converter = FootnoteConverter(soup)
         self._table_converter = TableConverter()
         self._bib_converter = BibliographyConverter()

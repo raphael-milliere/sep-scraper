@@ -9,7 +9,12 @@ from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 
-from sep_scraper.fetcher import fetch_article, validate_sep_url, ScraperError
+from sep_scraper.fetcher import (
+    fetch_article,
+    fetch_mathjax_macros,
+    validate_sep_url,
+    ScraperError,
+)
 from sep_scraper.parser import SEPParser
 from sep_scraper.assembler import assemble_markdown
 
@@ -47,12 +52,15 @@ async def scrape_article(url: str) -> str:
     # Validate URL
     validate_sep_url(url)
 
-    # Fetch HTML
-    html = await fetch_article(url)
+    # Fetch HTML and macros concurrently
+    html, macros = await asyncio.gather(
+        fetch_article(url),
+        fetch_mathjax_macros(url),
+    )
 
-    # Parse
+    # Parse with custom macros
     soup = BeautifulSoup(html, "lxml")
-    parser = SEPParser(soup, url)
+    parser = SEPParser(soup, url, macros)
 
     # Extract components
     metadata = parser.get_metadata()

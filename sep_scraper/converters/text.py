@@ -65,7 +65,11 @@ class TextConverter:
             elif child.name == "a":
                 text = self.convert_inline(child)
                 href = child.get("href", "")
-                result.append(f"[{text}]({href})")
+                # Skip creating links for anchors that only have id/name (no href)
+                if href:
+                    result.append(f"[{text}]({href})")
+                else:
+                    result.append(text)
             elif child.name == "sup":
                 # Handle superscript (often footnotes)
                 inner = self.convert_inline(child)

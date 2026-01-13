@@ -79,9 +79,23 @@ def extract_metadata(soup: BeautifulSoup, url: str) -> dict:
     # Extract author from copyright section
     metadata["author"] = None
     if copyright_div := soup.find("div", id="article-copyright"):
-        # Author name is typically in an anchor tag or before email
-        if author_link := copyright_div.find("a"):
-            metadata["author"] = author_link.get_text(strip=True)
+        # Find author links - skip the copyright link (first one links to info.html)
+        all_links = copyright_div.find_all("a")
+        author_links = []
+        for link in all_links:
+            href = link.get("href", "")
+            text = link.get_text(strip=True)
+            # Skip copyright link and email links
+            if "info.html" in href or "mailto:" in href:
+                continue
+            # Skip if text contains copyright symbol
+            if "©" in text or "copyright" in text.lower():
+                continue
+            author_links.append(text)
+
+        if author_links:
+            # Join multiple authors with " and "
+            metadata["author"] = " and ".join(author_links)
         else:
             # Try to extract from text before email
             text = copyright_div.get_text()

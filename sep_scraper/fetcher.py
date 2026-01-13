@@ -1,6 +1,7 @@
 """HTTP fetching utilities for SEP scraper."""
 
-from urllib.parse import urlparse
+import re
+from urllib.parse import urlparse, urljoin
 
 import httpx
 
@@ -9,6 +10,84 @@ class ScraperError(Exception):
     """Raised when scraping fails."""
 
     pass
+
+
+async def fetch_mathjax_macros(article_url: str) -> dict[str, str]:
+    """Fetch custom MathJax macros from article's local.js file.
+
+    Args:
+        article_url: SEP article URL
+
+    Returns:
+        Dictionary mapping macro names to their expansions
+    """
+    # Construct local.js URL
+    if not article_url.endswith("/"):
+        article_url += "/"
+    local_js_url = urljoin(article_url, "local.js")
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            response = await client.get(local_js_url, follow_redirects=True)
+            if response.status_code != 200:
+                return {}
+            return _parse_mathjax_macros(response.text)
+        except httpx.RequestError:
+            return {}
+
+
+def _parse_mathjax_macros(js_content: str) -> dict[str, str]:
+    """Parse MathJax macro definitions from local.js content.
+
+    Args:
+        js_content: JavaScript content from local.js
+
+    Returns:
+        Dictionary mapping macro names to expansions
+    """
+    macros = {}
+
+    # Find the Macros section - use balanced brace matching
+    macros_start = js_content.find("Macros")
+    if macros_start == -1:
+        return macros
+
+    # Find the opening brace after Macros
+    brace_start = js_content.find("{", macros_start)
+    if brace_start == -1:
+        return macros
+
+    # Find matching closing brace (handle nested braces)
+    depth = 1
+    pos = brace_start + 1
+    while pos < len(js_content) and depth > 0:
+        if js_content[pos] == "{":
+            depth += 1
+        elif js_content[pos] == "}":
+            depth -= 1
+        pos += 1
+
+    macros_section = js_content[brace_start + 1 : pos - 1]
+
+    # Pattern matches: macroName: "expansion" or macroName: ["expansion", numArgs]
+    # Handle escaped quotes in values
+    macro_pattern = re.compile(
+        r'(\w+)\s*:\s*(?:"((?:[^"\\]|\\.)*)"|\'((?:[^\'\\]|\\.)*)\'\s*|\["((?:[^"\\]|\\.)*)")',
+        re.MULTILINE,
+    )
+
+    for match in macro_pattern.finditer(macros_section):
+        name = match.group(1)
+        # Value could be in group 2, 3, or 4 depending on quote style
+        value = match.group(2) or match.group(3) or match.group(4)
+        if value:
+            # Decode JavaScript escape sequences (e.g., \\ -> \)
+            value = value.replace("\\\\", "\x00")  # Temp placeholder
+            value = value.replace("\\", "")  # Remove single escapes
+            value = value.replace("\x00", "\\")  # Restore double as single
+            macros[name] = value
+
+    return macros
 
 
 def validate_sep_url(url: str) -> str:
