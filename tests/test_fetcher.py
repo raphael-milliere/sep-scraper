@@ -38,3 +38,48 @@ class TestFetchArticle:
     async def test_fetch_invalid_url(self):
         with pytest.raises(ScraperError):
             await fetch_article("https://plato.stanford.edu/entries/nonexistent-article-xyz/")
+
+
+class TestFetchAppendices:
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_fetches_multiple_appendices(self):
+        from sep_scraper.fetcher import fetch_appendices
+
+        # Use real SEP appendix URLs
+        links = [
+            ("https://plato.stanford.edu/entries/dynamic-epistemic/appendix-A-kripke.html", "A. Kripke models"),
+            ("https://plato.stanford.edu/entries/dynamic-epistemic/appendix-C-relations.html", "C. Relations"),
+        ]
+
+        results = await fetch_appendices(links)
+
+        assert len(results) == 2
+        assert results[0][0] == "A. Kripke models"
+        assert "<html" in results[0][1].lower()
+        assert results[1][0] == "C. Relations"
+        assert "<html" in results[1][1].lower()
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_empty_input(self):
+        from sep_scraper.fetcher import fetch_appendices
+
+        results = await fetch_appendices([])
+
+        assert results == []
+
+    @pytest.mark.asyncio
+    @pytest.mark.integration
+    async def test_skips_failed_fetches(self):
+        from sep_scraper.fetcher import fetch_appendices
+
+        links = [
+            ("https://plato.stanford.edu/entries/dynamic-epistemic/appendix-A-kripke.html", "A. Kripke models"),
+            ("https://plato.stanford.edu/entries/nonexistent/fake-appendix.html", "Fake appendix"),
+        ]
+
+        results = await fetch_appendices(links)
+
+        # Should only return the successful fetch
+        assert len(results) == 1
+        assert results[0][0] == "A. Kripke models"

@@ -1,9 +1,13 @@
 """HTTP fetching utilities for SEP scraper."""
 
+import asyncio
+import logging
 import re
 from urllib.parse import urlparse, urljoin
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class ScraperError(Exception):
@@ -155,3 +159,34 @@ async def fetch_article(url: str) -> str:
             raise ScraperError(f"HTTP {e.response.status_code} for {url}")
         except httpx.RequestError as e:
             raise ScraperError(f"Network error: {e}")
+
+
+async def fetch_appendices(
+    appendix_links: list[tuple[str, str]]
+) -> list[tuple[str, str]]:
+    """Fetch appendix HTML pages in parallel.
+
+    Args:
+        appendix_links: List of (url, title) tuples
+
+    Returns:
+        List of (title, html_content) tuples for successful fetches
+    """
+    if not appendix_links:
+        return []
+
+    async def fetch_one(url: str, title: str) -> tuple[str, str] | None:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.get(url, follow_redirects=True)
+                response.raise_for_status()
+                return (title, response.text)
+            except (httpx.HTTPStatusError, httpx.RequestError) as e:
+                logger.warning(f"Failed to fetch appendix '{title}': {e}")
+                return None
+
+    tasks = [fetch_one(url, title) for url, title in appendix_links]
+    results = await asyncio.gather(*tasks)
+
+    # Filter out failed fetches (None values)
+    return [r for r in results if r is not None]
