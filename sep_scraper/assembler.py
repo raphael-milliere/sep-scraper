@@ -8,6 +8,7 @@ def assemble_markdown(
     content: str,
     footnotes: str,
     bibliography: str,
+    appendices: list[tuple[str, str]] | None = None,
 ) -> str:
     """Assemble final markdown document from parts.
 
@@ -16,6 +17,7 @@ def assemble_markdown(
         content: Main article content as markdown
         footnotes: Formatted footnote definitions
         bibliography: Bibliography section as markdown
+        appendices: Optional list of (title, content) tuples
 
     Returns:
         Complete markdown document
@@ -33,6 +35,14 @@ def assemble_markdown(
     # Main content
     if content:
         parts.append(content)
+
+    # Appendices
+    if appendices:
+        for title, appendix_content in appendices:
+            parts.append("")
+            parts.append(f"## Appendix {title}")
+            parts.append("")
+            parts.append(appendix_content)
 
     # Footnotes section
     if footnotes:

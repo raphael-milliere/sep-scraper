@@ -61,3 +61,56 @@ class TestAssembleMarkdown:
         bib_pos = result.find("## Bibliography")
 
         assert content_pos < notes_pos < bib_pos
+
+
+class TestAppendixAssembly:
+    def test_includes_appendices_before_bibliography(self):
+        from sep_scraper.assembler import assemble_markdown
+
+        metadata = {"title": "Test Article"}
+        content = "Main content here."
+        footnotes = "[^1]: Footnote text"
+        bibliography = "## Bibliography\n\n- Reference 1"
+        appendices = [
+            ("A. First Appendix", "First appendix content."),
+            ("B. Second Appendix", "Second appendix content."),
+        ]
+
+        result = assemble_markdown(metadata, content, footnotes, bibliography, appendices)
+
+        # Check appendices are present
+        assert "## Appendix A. First Appendix" in result
+        assert "First appendix content." in result
+        assert "## Appendix B. Second Appendix" in result
+        assert "Second appendix content." in result
+
+        # Check order: content -> appendices -> notes -> bibliography
+        content_pos = result.find("Main content")
+        appendix_a_pos = result.find("## Appendix A")
+        appendix_b_pos = result.find("## Appendix B")
+        notes_pos = result.find("## Notes")
+        bib_pos = result.find("## Bibliography")
+
+        assert content_pos < appendix_a_pos < appendix_b_pos < notes_pos < bib_pos
+
+    def test_handles_no_appendices(self):
+        from sep_scraper.assembler import assemble_markdown
+
+        metadata = {"title": "Test"}
+        content = "Content"
+        footnotes = ""
+        bibliography = "## Bibliography\n\n- Ref"
+
+        # No appendices parameter (backward compatible)
+        result = assemble_markdown(metadata, content, footnotes, bibliography)
+
+        assert "Appendix" not in result
+        assert "Content" in result
+
+    def test_handles_empty_appendices_list(self):
+        from sep_scraper.assembler import assemble_markdown
+
+        metadata = {"title": "Test"}
+        result = assemble_markdown(metadata, "Content", "", "## Bib", appendices=[])
+
+        assert "Appendix" not in result
