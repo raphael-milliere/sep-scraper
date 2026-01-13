@@ -12,14 +12,14 @@ class ScraperError(Exception):
     pass
 
 
-async def fetch_mathjax_macros(article_url: str) -> dict[str, str]:
+async def fetch_mathjax_macros(article_url: str) -> dict[str, tuple[str, int]]:
     """Fetch custom MathJax macros from article's local.js file.
 
     Args:
         article_url: SEP article URL
 
     Returns:
-        Dictionary mapping macro names to their expansions
+        Dictionary mapping macro names to (expansion, num_args) tuples
     """
     # Construct local.js URL
     if not article_url.endswith("/"):
@@ -36,14 +36,14 @@ async def fetch_mathjax_macros(article_url: str) -> dict[str, str]:
             return {}
 
 
-def _parse_mathjax_macros(js_content: str) -> dict[str, str]:
+def _parse_mathjax_macros(js_content: str) -> dict[str, tuple[str, int]]:
     """Parse MathJax macro definitions from local.js content.
 
     Args:
         js_content: JavaScript content from local.js
 
     Returns:
-        Dictionary mapping macro names to expansions
+        Dictionary mapping macro names to (expansion, num_args) tuples
     """
     macros = {}
 
@@ -69,23 +69,39 @@ def _parse_mathjax_macros(js_content: str) -> dict[str, str]:
 
     macros_section = js_content[brace_start + 1 : pos - 1]
 
-    # Pattern matches: macroName: "expansion" or macroName: ["expansion", numArgs]
-    # Handle escaped quotes in values
-    macro_pattern = re.compile(
-        r'(\w+)\s*:\s*(?:"((?:[^"\\]|\\.)*)"|\'((?:[^\'\\]|\\.)*)\'\s*|\["((?:[^"\\]|\\.)*)")',
+    # Pattern for simple string format: macroName: "expansion" or 'expansion'
+    simple_pattern = re.compile(
+        r'(\w+)\s*:\s*(?:"((?:[^"\\]|\\.)*)"|\'((?:[^\'\\]|\\.)*)\')\s*(?:,|$)',
         re.MULTILINE,
     )
 
-    for match in macro_pattern.finditer(macros_section):
+    # Pattern for array format: macroName: ["expansion"] or ["expansion", numArgs]
+    array_pattern = re.compile(
+        r'(\w+)\s*:\s*\[\s*"((?:[^"\\]|\\.)*)"\s*(?:,\s*(\d+))?\s*\]',
+        re.MULTILINE,
+    )
+
+    def decode_js_escapes(value: str) -> str:
+        """Decode JavaScript escape sequences."""
+        value = value.replace("\\\\", "\x00")  # Temp placeholder
+        value = value.replace("\\", "")  # Remove single escapes
+        value = value.replace("\x00", "\\")  # Restore double as single
+        return value
+
+    # Parse simple format (no arguments)
+    for match in simple_pattern.finditer(macros_section):
         name = match.group(1)
-        # Value could be in group 2, 3, or 4 depending on quote style
-        value = match.group(2) or match.group(3) or match.group(4)
+        value = match.group(2) or match.group(3)
         if value:
-            # Decode JavaScript escape sequences (e.g., \\ -> \)
-            value = value.replace("\\\\", "\x00")  # Temp placeholder
-            value = value.replace("\\", "")  # Remove single escapes
-            value = value.replace("\x00", "\\")  # Restore double as single
-            macros[name] = value
+            macros[name] = (decode_js_escapes(value), 0)
+
+    # Parse array format (may have arguments)
+    for match in array_pattern.finditer(macros_section):
+        name = match.group(1)
+        value = match.group(2)
+        num_args = int(match.group(3)) if match.group(3) else 0
+        if value:
+            macros[name] = (decode_js_escapes(value), num_args)
 
     return macros
 

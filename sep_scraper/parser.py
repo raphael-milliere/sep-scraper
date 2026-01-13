@@ -36,14 +36,14 @@ class SEPParser:
         self,
         soup: BeautifulSoup,
         url: str,
-        macros: dict[str, str] | None = None,
+        macros: dict[str, tuple[str, int]] | None = None,
     ):
         """Initialize parser with parsed HTML.
 
         Args:
             soup: BeautifulSoup parsed document
             url: Source URL
-            macros: Optional custom MathJax macros for expansion
+            macros: Optional custom MathJax macros as (expansion, num_args) tuples
         """
         self._soup = soup
         self._url = url
