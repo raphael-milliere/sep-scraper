@@ -71,3 +71,42 @@ class TestMetadata:
         metadata = parser.get_metadata()
         assert metadata["title"] == "Sample Topic"
         assert metadata["author"] == "Test Author"
+
+
+class TestAppendixExtraction:
+    def test_extracts_appendix_links(self):
+        html = """
+        <html><body>
+        <div id="main-text">
+            <h2>Appendices</h2>
+            <ul>
+                <li><a href="appendix-A.html">A. First appendix</a></li>
+                <li><a href="appendix-B.html">B. Second appendix</a></li>
+            </ul>
+        </div>
+        </body></html>
+        """
+        soup = BeautifulSoup(html, "lxml")
+        parser = SEPParser(soup, "https://plato.stanford.edu/entries/test/")
+
+        links = parser.get_appendix_links()
+
+        assert len(links) == 2
+        assert links[0] == ("https://plato.stanford.edu/entries/test/appendix-A.html", "A. First appendix")
+        assert links[1] == ("https://plato.stanford.edu/entries/test/appendix-B.html", "B. Second appendix")
+
+    def test_returns_empty_list_when_no_appendices(self):
+        html = """
+        <html><body>
+        <div id="main-text">
+            <h2>Introduction</h2>
+            <p>Some content</p>
+        </div>
+        </body></html>
+        """
+        soup = BeautifulSoup(html, "lxml")
+        parser = SEPParser(soup, "https://plato.stanford.edu/entries/test/")
+
+        links = parser.get_appendix_links()
+
+        assert links == []

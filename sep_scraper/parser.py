@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING
+from urllib.parse import urljoin
 
 from sep_scraper.converters import (
     TextConverter,
@@ -229,3 +230,28 @@ class SEPParser:
                 return self._bib_converter.convert(temp_soup.div)
 
         return ""
+
+    def get_appendix_links(self) -> list[tuple[str, str]]:
+        """Extract appendix links from Appendices section.
+
+        Returns:
+            List of (url, title) tuples for each appendix
+        """
+        appendix_links = []
+
+        # Find Appendices heading
+        for heading in self._soup.find_all("h2"):
+            heading_text = heading.get_text(strip=True).lower()
+            if heading_text == "appendices":
+                # Find the ul immediately following
+                ul = heading.find_next_sibling("ul")
+                if ul:
+                    for li in ul.find_all("li", recursive=False):
+                        link = li.find("a")
+                        if link and link.get("href"):
+                            url = urljoin(self._url, link["href"])
+                            title = link.get_text(strip=True)
+                            appendix_links.append((url, title))
+                break
+
+        return appendix_links
