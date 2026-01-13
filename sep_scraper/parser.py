@@ -27,6 +27,7 @@ EXCLUDED_SECTIONS = {
     "academic tools",
     "other internet resources",
     "acknowledgments",
+    "appendices",
 }
 
 
@@ -271,6 +272,11 @@ class SEPParser:
 
         if not main_text:
             return ""
+
+        # Remove the first h2 (title heading) to avoid duplication with assembler header
+        first_h2 = main_text.find("h2")
+        if first_h2:
+            first_h2.decompose()
 
         # Demote heading levels (h2->h3, h3->h4, etc.)
         for heading in main_text.find_all(["h2", "h3", "h4", "h5"]):

@@ -119,10 +119,11 @@ class TestAppendixExtraction:
         main_soup = BeautifulSoup(main_html, "lxml")
         parser = SEPParser(main_soup, "https://plato.stanford.edu/entries/test/")
 
-        # Appendix HTML
+        # Appendix HTML - first H2 is page title (removed), subsequent content preserved
         appendix_html = """
         <html><body>
         <div id="main-text">
+            <h2>Appendix A: Page Title</h2>
             <p>Appendix introduction paragraph.</p>
             <h2>Section Title</h2>
             <p>Section content.</p>
@@ -136,15 +137,18 @@ class TestAppendixExtraction:
         assert "Appendix introduction paragraph." in content
         assert "### Section Title" in content  # H2 demoted to H3
         assert "Section content." in content
+        assert "Page Title" not in content  # First H2 (page title) is removed
 
     def test_demotes_heading_levels(self):
         main_html = "<html><body><div id='main-text'></div></body></html>"
         main_soup = BeautifulSoup(main_html, "lxml")
         parser = SEPParser(main_soup, "https://plato.stanford.edu/entries/test/")
 
+        # First H2 is page title (removed), subsequent headings are demoted
         appendix_html = """
         <html><body>
         <div id="main-text">
+            <h2>Page Title</h2>
             <h2>Level 2</h2>
             <h3>Level 3</h3>
             <h4>Level 4</h4>
@@ -156,6 +160,7 @@ class TestAppendixExtraction:
 
         content = parser.parse_appendix(appendix_soup)
 
+        assert "Page Title" not in content  # First H2 (page title) is removed
         assert "### Level 2" in content  # H2 -> H3
         assert "#### Level 3" in content  # H3 -> H4
         assert "##### Level 4" in content  # H4 -> H5
