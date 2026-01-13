@@ -77,7 +77,7 @@ class FootnoteConverter:
         Returns:
             Markdown string with proper formatting
         """
-        inner = self._text_converter._convert_inline(element)
+        inner = self._text_converter.convert_inline(element)
         if element.name in ("em", "i"):
             return f"*{inner}*"
         elif element.name in ("strong", "b"):

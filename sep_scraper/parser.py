@@ -14,8 +14,10 @@ from sep_scraper.converters import (
 )
 from sep_scraper.metadata import extract_metadata
 
+from bs4 import BeautifulSoup
+
 if TYPE_CHECKING:
-    from bs4 import BeautifulSoup, Tag
+    from bs4 import Tag
 
 
 # Sections to exclude from main content
@@ -79,11 +81,22 @@ class SEPParser:
                 # Remove numbering for comparison
                 heading_text = re.sub(r"^\d+\.\s*", "", heading_text)
 
-                if heading_text in EXCLUDED_SECTIONS or heading_text == "bibliography":
-                    skip_until_next_h2 = True
-                    continue
-                else:
-                    skip_until_next_h2 = False
+                is_excluded = (
+                    heading_text in EXCLUDED_SECTIONS
+                    or heading_text in ("bibliography", "references")
+                )
+
+                if element.name == "h2":
+                    # h2 always controls skip state
+                    skip_until_next_h2 = is_excluded
+                    if is_excluded:
+                        continue
+                else:  # h3
+                    # h3 can start a skip, but never ends an existing skip
+                    if is_excluded:
+                        skip_until_next_h2 = True
+                        continue
+                    # Non-excluded h3 doesn't change skip state
 
             if skip_until_next_h2:
                 continue
@@ -162,9 +175,9 @@ class SEPParser:
                 if math_result := self._math_converter.extract_from_span(child):
                     result_parts.append(math_result)
                 else:
-                    result_parts.append(self._text_converter._convert_inline(child))
+                    result_parts.append(self._text_converter.convert_inline(child))
             else:
-                result_parts.append(self._text_converter._convert_inline(child))
+                result_parts.append(self._text_converter.convert_inline(child))
 
         text = "".join(result_parts)
         # Normalize whitespace
@@ -200,8 +213,6 @@ class SEPParser:
                     return self._bib_converter.convert(section)
 
                 # Build a virtual section from heading + following siblings
-                from bs4 import BeautifulSoup
-
                 section_html = str(heading)
                 for sibling in heading.find_next_siblings():
                     if sibling.name in ("h2", "h3"):

@@ -34,20 +34,20 @@ class TextConverter:
         elif tag_name == "blockquote":
             return self._convert_blockquote(element)
         else:
-            return self._convert_inline(element)
+            return self.convert_inline(element)
 
     def _convert_heading(self, element: Tag) -> str:
         """Convert heading element to Markdown."""
         level = int(element.name[1])
         prefix = "#" * level
-        text = self._convert_inline(element)
+        text = self.convert_inline(element)
         return f"{prefix} {text}"
 
     def _convert_paragraph(self, element: Tag) -> str:
         """Convert paragraph element to Markdown."""
-        return self._convert_inline(element)
+        return self.convert_inline(element)
 
-    def _convert_inline(self, element: Tag) -> str:
+    def convert_inline(self, element: Tag) -> str:
         """Convert inline content to Markdown."""
         result = []
 
@@ -57,21 +57,21 @@ class TextConverter:
                 text = re.sub(r"\s+", " ", child)
                 result.append(text)
             elif child.name == "em" or child.name == "i":
-                inner = self._convert_inline(child)
+                inner = self.convert_inline(child)
                 result.append(f"*{inner}*")
             elif child.name == "strong" or child.name == "b":
-                inner = self._convert_inline(child)
+                inner = self.convert_inline(child)
                 result.append(f"**{inner}**")
             elif child.name == "a":
-                text = self._convert_inline(child)
+                text = self.convert_inline(child)
                 href = child.get("href", "")
                 result.append(f"[{text}]({href})")
             elif child.name == "sup":
                 # Handle superscript (often footnotes)
-                inner = self._convert_inline(child)
+                inner = self.convert_inline(child)
                 result.append(inner)
             elif child.name == "sub":
-                inner = self._convert_inline(child)
+                inner = self.convert_inline(child)
                 result.append(inner)
             elif child.name == "br":
                 result.append("\n")
@@ -79,7 +79,7 @@ class TextConverter:
                 inner = child.get_text()
                 result.append(f"`{inner}`")
             elif hasattr(child, "children"):
-                result.append(self._convert_inline(child))
+                result.append(self.convert_inline(child))
 
         return "".join(result).strip()
 
@@ -100,7 +100,7 @@ class TextConverter:
                 elif isinstance(child, str):
                     text_parts.append(child.strip())
                 elif hasattr(child, "name"):
-                    text_parts.append(self._convert_inline(child))
+                    text_parts.append(self.convert_inline(child))
 
             text = " ".join(filter(None, text_parts))
 
@@ -124,7 +124,7 @@ class TextConverter:
 
         for child in element.children:
             if hasattr(child, "name") and child.name == "p":
-                text = self._convert_inline(child)
+                text = self.convert_inline(child)
                 lines.append(f"> {text}")
             elif isinstance(child, str) and child.strip():
                 lines.append(f"> {child.strip()}")

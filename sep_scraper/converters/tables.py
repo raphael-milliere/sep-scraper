@@ -80,7 +80,7 @@ class TableConverter:
             Cell content as Markdown string
         """
         # Convert inner content
-        content = self._text_converter._convert_inline(cell)
+        content = self._text_converter.convert_inline(cell)
 
         # Replace line breaks with space
         content = re.sub(r"\n+", " ", content)

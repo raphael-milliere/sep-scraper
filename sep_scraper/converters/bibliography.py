@@ -37,13 +37,13 @@ class BibliographyConverter:
         # Try list-based bibliography first
         if ul := section.find("ul"):
             for li in ul.find_all("li", recursive=False):
-                entry = self._text_converter._convert_inline(li)
+                entry = self._text_converter.convert_inline(li)
                 lines.append(f"- {entry}")
                 lines.append("")
         # Fall back to paragraph-based
         else:
             for p in section.find_all("p"):
-                entry = self._text_converter._convert_inline(p)
+                entry = self._text_converter.convert_inline(p)
                 if entry:
                     lines.append(entry)
                     lines.append("")
