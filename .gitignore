@@ -47,3 +47,6 @@ Thumbs.db
 # Project specific
 output/
 docs/
+
+# Git worktrees
+.worktrees/
