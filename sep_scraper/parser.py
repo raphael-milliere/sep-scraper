@@ -63,6 +63,29 @@ class SEPParser:
         """
         return extract_metadata(self._soup, self._url)
 
+    def get_preamble(self) -> str:
+        """Extract and convert preamble (introduction before first section).
+
+        Returns:
+            Markdown string of preamble content, or empty string if none
+        """
+        preamble_div = self._soup.find("div", id="preamble")
+        if not preamble_div:
+            return ""
+
+        lines = []
+        for element in preamble_div.children:
+            if not hasattr(element, "name"):
+                continue
+            converted = self._convert_element(element)
+            if converted:
+                lines.append(converted)
+                lines.append("")
+
+        result = "\n".join(lines)
+        result = self._math_converter.convert_text(result)
+        return result.strip()
+
     def get_main_content(self) -> str:
         """Extract and convert main article content.
 

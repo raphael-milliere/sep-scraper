@@ -9,6 +9,7 @@ def assemble_markdown(
     footnotes: str,
     bibliography: str,
     appendices: list[tuple[str, str]] | None = None,
+    preamble: str = "",
 ) -> str:
     """Assemble final markdown document from parts.
 
@@ -18,6 +19,7 @@ def assemble_markdown(
         footnotes: Formatted footnote definitions
         bibliography: Bibliography section as markdown
         appendices: Optional list of (title, content) tuples
+        preamble: Optional introductory text before first section
 
     Returns:
         Complete markdown document
@@ -30,6 +32,11 @@ def assemble_markdown(
     # Title as H1
     if metadata.get("title"):
         parts.append(f"# {metadata['title']}")
+        parts.append("")
+
+    # Preamble (intro before first section)
+    if preamble:
+        parts.append(preamble)
         parts.append("")
 
     # Main content

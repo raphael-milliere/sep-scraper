@@ -77,12 +77,15 @@ async def scrape_article(url: str) -> str:
 
     # Extract other components
     metadata = parser.get_metadata()
+    preamble = parser.get_preamble()
     content = parser.get_main_content()
     footnotes = parser.get_footnotes()
     bibliography = parser.get_bibliography()
 
-    # Assemble with appendices
-    return assemble_markdown(metadata, content, footnotes, bibliography, appendices)
+    # Assemble with appendices and preamble
+    return assemble_markdown(
+        metadata, content, footnotes, bibliography, appendices, preamble
+    )
 
 
 def main() -> None:

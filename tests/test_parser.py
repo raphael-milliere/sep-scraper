@@ -20,6 +20,25 @@ def parser(sample_soup):
     return SEPParser(sample_soup, "https://plato.stanford.edu/entries/sample/")
 
 
+class TestPreambleExtraction:
+    def test_extracts_preamble(self, parser):
+        preamble = parser.get_preamble()
+        assert "This is the introduction paragraph." in preamble
+
+    def test_returns_empty_string_when_no_preamble(self):
+        html = """
+        <html><body>
+        <div id="main-text">
+            <h2>Section</h2>
+            <p>Content</p>
+        </div>
+        </body></html>
+        """
+        soup = BeautifulSoup(html, "lxml")
+        parser = SEPParser(soup, "https://plato.stanford.edu/entries/test/")
+        assert parser.get_preamble() == ""
+
+
 class TestContentExtraction:
     def test_extracts_main_content(self, parser):
         content = parser.get_main_content()
