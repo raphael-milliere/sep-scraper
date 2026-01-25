@@ -23,7 +23,6 @@ class TestAssembleMarkdown:
         # Check structure
         assert result.startswith("---\n")
         assert "title: " in result
-        assert "# Test Article" in result
         assert "This is the article content." in result
         assert "## Notes" in result
         assert "[^1]: A footnote." in result

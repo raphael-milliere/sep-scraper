@@ -29,11 +29,6 @@ def assemble_markdown(
     # YAML frontmatter
     parts.append(format_frontmatter(metadata))
 
-    # Title as H1
-    if metadata.get("title"):
-        parts.append(f"# {metadata['title']}")
-        parts.append("")
-
     # Preamble (intro before first section)
     if preamble:
         parts.append(preamble)
