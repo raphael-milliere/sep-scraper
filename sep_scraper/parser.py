@@ -92,20 +92,49 @@ class SEPParser:
         Returns:
             Markdown string of article body
         """
-        main_text = self._soup.find("div", id="main-text")
-        if not main_text:
-            main_text = self._soup.find("div", id="aueditable")
-
-        if not main_text:
+        # Use aueditable as the content source to handle malformed HTML where
+        # orphan </div> tags cause main-text to close prematurely. Content
+        # elements may be direct children of aueditable or inside main-text.
+        aueditable = self._soup.find("div", id="aueditable")
+        if not aueditable:
             return ""
+
+        # IDs of divs that are not main content
+        non_content_ids = {
+            "pubinfo",
+            "preamble",
+            "toc",
+            "bibliography",
+            "academic-tools",
+            "other-internet-resources",
+            "related-entries",
+            "acknowledgments",
+        }
+
+        # Collect content elements from aueditable, including from main-text
+        content_elements = []
+        for element in aueditable.children:
+            if not hasattr(element, "name"):
+                continue
+            # Skip non-content divs
+            if element.name == "div" and element.get("id") in non_content_ids:
+                continue
+            # Skip the h1 title (handled separately in metadata)
+            if element.name == "h1":
+                continue
+            # If this is main-text, extract its children
+            if element.name == "div" and element.get("id") == "main-text":
+                for child in element.children:
+                    if hasattr(child, "name"):
+                        content_elements.append(child)
+            else:
+                # Direct child of aueditable (possibly escaped from main-text)
+                content_elements.append(element)
 
         lines = []
         skip_until_next_h2 = False
 
-        for element in main_text.children:
-            if not hasattr(element, "name"):
-                continue
-
+        for element in content_elements:
             # Check for section headings to exclude
             if element.name in ("h2", "h3"):
                 heading_text = element.get_text(strip=True).lower()
